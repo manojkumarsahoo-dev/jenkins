@@ -2,12 +2,11 @@
 
 This guide provides step-by-step instructions to set up Jenkins on an AWS EC2 instance, install required build tools, configure a `Jenkinsfile`, and trigger your first pipeline.
 
----
-
 ## 📋 Overview
-- **Hosting Environment:** AWS EC2 (Ubuntu 24.04 LTS)
-- **CI/CD Tool:** Jenkins
-- **Build Tools:** Node.js 20, Git, Java 17
+
+* **Hosting Environment:** AWS EC2 (Ubuntu 24.04 LTS)
+* **CI/CD Tool:** Jenkins
+* **Build Tools:** Node.js 20, Git, Java 17
 
 ---
 
@@ -17,16 +16,17 @@ This guide provides step-by-step instructions to set up Jenkins on an AWS EC2 in
 2. **Instance Type:** Select `t3.medium` (minimum 2GB RAM required for Jenkins).
 3. **Security Group Configuration:**
    Add the following inbound rules:
-   | Type | Port | Source | Purpose |
-   | :--- | :--- | :--- | :--- |
-   | **SSH** | `22` | My IP | Secure SSH Terminal Access |
-   | **Custom TCP** | `8080` | `0.0.0.0/0` | Access Jenkins Web UI |
+
+   | Type | Port | Source | Purpose | 
+   | ----- | ----- | ----- | ----- | 
+   | **SSH** | `22` | My IP | Secure SSH Terminal Access | 
+   | **Custom TCP** | `8080` | `0.0.0.0/0` | Access Jenkins Web UI | 
 
 ---
 
-## ⚙️ Step 2: Install Java & Jenkins on EC2
+## ⚙️ Step 2: Install Java & Jenkins on Ubuntu 24.04 EC2
 
-Connect to your EC2 instance via SSH and execute the following commands:
+Connect to your EC2 instance via SSH / EC2 Instance Connect and execute the following commands step by step:
 
 ```bash
 # 1. Update system packages
@@ -36,19 +36,20 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install fontconfig openjdk-17-jre -y
 java -version
 
-# 3. Add the official Jenkins repository key and source list
-sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
-  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+# 3. Clean up any previous conflicting keyring or repository files
+sudo rm -f /etc/apt/sources.list.d/jenkins.list /etc/apt/trusted.gpg.d/jenkins.gpg /usr/share/keyrings/jenkins-keyring.gpg
 
-echo deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-  https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
-  /etc/apt/sources.list.d/jenkins.list > /dev/null
+# 4. Import the official Jenkins GPG key using gpg dearmor (Ubuntu 24.04 standard)
+curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | sudo gpg --dearmor -o /usr/share/keyrings/jenkins-keyring.gpg
 
-# 4. Install Jenkins
+# 5. Add the Jenkins stable repository linked with the keyring
+echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.gpg] https://pkg.jenkins.io/debian-stable binary/" | sudo tee /etc/apt/sources.list.d/jenkins.list > /dev/null
+
+# 6. Update package index and install Jenkins
 sudo apt update
 sudo apt install jenkins -y
 
-# 5. Enable and start Jenkins service
+# 7. Enable and start Jenkins service
 sudo systemctl enable jenkins
 sudo systemctl start jenkins
 ```
@@ -61,17 +62,19 @@ sudo systemctl start jenkins
    ```text
    http://<YOUR_EC2_PUBLIC_IP>:8080
    ```
-2. Retrieve the initial admin password from your EC2 SSH session:
+
+2. Retrieve the initial admin password from your EC2 terminal:
    ```bash
    sudo cat /var/lib/jenkins/secrets/initialAdminPassword
    ```
+
 3. Paste the password into the prompt, select **"Install Suggested Plugins"**, and set up your Admin user account.
 
 ---
 
 ## 🛠️ Step 4: Install Build Tools (Node.js & Git)
 
-Because Jenkins runs builds locally on the EC2 runner, install Node.js and Git:
+Because Jenkins executes build steps locally on the server, install Node.js and Git on the EC2 runner:
 
 ```bash
 # Install Git
@@ -91,7 +94,7 @@ npm -v
 
 ## 📄 Step 5: Add `Jenkinsfile` to Your Repository
 
-Create a file named `Jenkinsfile` (no file extension) in the root directory of your project:
+Create a file named `Jenkinsfile` (no extension) in the root directory of your project repository:
 
 ```groovy
 pipeline {
@@ -141,7 +144,7 @@ pipeline {
 }
 ```
 
-Commit and push the file to your repository:
+Commit and push the file to GitHub:
 ```bash
 git add Jenkinsfile
 git commit -m "Add Jenkinsfile pipeline configuration"
@@ -156,11 +159,11 @@ git push origin main
 2. Click **New Item** on the left menu.
 3. Enter `devsecops-jenkins-pipeline`, select **Pipeline**, and click **OK**.
 4. Scroll down to the **Pipeline** section:
-   - Set **Definition** to **`Pipeline script from SCM`**.
-   - Set **SCM** to **`Git`**.
-   - Set **Repository URL** to your GitHub repository URL (e.g., `https://github.com/manojkumarsahoo-dev/githubactions.git`).
-   - Set **Branch Specifier** to `*/main`.
-   - Ensure **Script Path** is `Jenkinsfile`.
+   * Set **Definition** to **`Pipeline script from SCM`**.
+   * Set **SCM** to **`Git`**.
+   * Set **Repository URL** to your GitHub repository URL (e.g., `https://github.com/manojkumarsahoo-dev/githubactions.git`).
+   * Set **Branch Specifier** to `*/main`.
+   * Ensure **Script Path** is `Jenkinsfile`.
 5. Click **Save**.
-6. Click **Build Now** on the job sidebar to trigger your pipeline execution.
-7. Click the build number under **Build History** -> **Console Output** to monitor live logs.
+6. Click **Build Now** on the sidebar to trigger your pipeline.
+7. Click the build number under **Build History** -> **Console Output** to monitor live execution logs.
